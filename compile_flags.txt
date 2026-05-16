@@ -1,0 +1,5 @@
+-O2
+-Wall
+-Wextra
+-Werror
+-std=c17

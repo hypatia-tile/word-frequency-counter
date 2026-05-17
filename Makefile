@@ -19,26 +19,26 @@ DEBUG_TARGET := $(DEBUG_BIN_DIR)/main
 all: $(TARGET)
 
 run: $(TARGET)
-	./$<
+	@./$<
 
 debug: $(DEBUG_TARGET)
-	lldb $<
+	@lldb $<
 
 $(TARGET): $(OBJ_FILES)
-	mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) -o $@ $^
+	@mkdir -p $(BIN_DIR)
+	@$(CC) $(CFLAGS) -o $@ $^
 
 $(DEBUG_TARGET): $(DEBUG_OBJ_FILES)
-	mkdir -p $(DEBUG_BIN_DIR)
-	$(CC) $(DEBUGFLAGS) -o $@ $^
+	@mkdir -p $(DEBUG_BIN_DIR)
+	@$(CC) $(DEBUGFLAGS) -o $@ $^
 
 $(DEBUG_OBJ_FILES): $(DEBUG_OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	mkdir -p $(DEBUG_OBJ_DIR)
-	$(CC) -c $(DEBUGFLAGS) -o $@ $<
+	@mkdir -p $(DEBUG_OBJ_DIR)
+	@$(CC) -c $(DEBUGFLAGS) -o $@ $<
 
 $(OBJ_FILES): $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	mkdir -p $(OBJ_DIR)
-	$(CC) -c $(CFLAGS) -o $@ $<
+	@mkdir -p $(OBJ_DIR)
+	@$(CC) -c $(CFLAGS) -o $@ $<
 
 clean:
-	rm -rf $(OBJ_DIR) $(BIN_DIR) $(DEBUG_OBJ_DIR) $(DEBUG_BIN_DIR)
+	@rm -rf $(OBJ_DIR) $(BIN_DIR) $(DEBUG_OBJ_DIR) $(DEBUG_BIN_DIR)

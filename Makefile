@@ -14,7 +14,12 @@ DEBUG_OBJ_FILES := $(DEBUG_OBJ_DIR)/main.o
 DEBUG_BIN_DIR := debug/bin
 DEBUG_TARGET := $(DEBUG_BIN_DIR)/main
 
+.PHONY: all run debug clean
+
 all: $(TARGET)
+
+run: $(TARGET)
+	./$<
 
 debug: $(DEBUG_TARGET)
 	lldb $<

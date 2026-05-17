@@ -48,5 +48,7 @@ int main() {
   for (int j = 0; j < 3; j++) {
     printf("%d. key: %s, count: %g\n", j, entries[j].key, entries[j].value);
   }
+  const char *apple = "apple";
+  printf("%s: [%x]\n", apple, hashString(apple, strlen(apple)));
   return 0;
 }

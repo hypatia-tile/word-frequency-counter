@@ -6,6 +6,22 @@
 
 #define CAPACITY 8
 
+#define GROW_CAPACITY(x) (x == 0 ? 8 : x * 2)
+
+#define GROW_ARRAY(type, arr, n) ((type *)reallocate(arr, sizeof(type) * n))
+
+#define FREE_ARRAY(arr) (reallocate(arr, 0))
+
+#define LOAD_FACTOR 0.75
+
+void *reallocate(void *arr, size_t n) {
+  if (n == 0) {
+    free(arr);
+    return NULL;
+  }
+  return realloc(arr, n);
+}
+
 typedef double Value;
 
 typedef struct {
@@ -25,7 +41,6 @@ typedef struct {
 } Table;
 
 void initTable(Table *table) {
-  table->entries = (Entry *)malloc(CAPACITY * sizeof(Entry));
   for (size_t i = 0; i < CAPACITY; i++) {
     table->entries[i].key.data = NULL;
     table->entries[i].key.length = 0;
@@ -51,28 +66,64 @@ uint32_t hashString(const char *key, int length) {
   return hash;
 }
 
-void insert(Table *table, char *key, int length, Value value) {
-  if (table->count >= table->capacity) {
-    fprintf(stderr, "insert: Table is full\n");
-    exit(EXIT_FAILURE);
+static inline void rearrangeEntries(Table *table) {
+  Entry *oldEntries = table->entries;
+  size_t oldCap = table->capacity;
+  table->capacity = GROW_CAPACITY(oldCap);
+  table->entries = GROW_ARRAY(Entry, NULL, table->capacity);
+  table->count = 0;
+  for (size_t i = 0; i < oldCap; i++) {
+    const Entry oldEntry = oldEntries[i];
+    if (oldEntry.key.data == NULL)
+      continue;
+    uint32_t hash =
+        hashString(oldEntry.key.data, oldEntry.key.length) % table->capacity;
+    for (size_t i = 0; i < table->capacity; i++) {
+      Entry *newEntry = &table->entries[hash];
+      if (newEntry->key.data == NULL) {
+        if (newEntry->value == 0) {
+          newEntry->key = oldEntry.key;
+          newEntry->value = oldEntry.value;
+          table->count++;
+          break;
+        }
+      } else if (newEntry->key.length == oldEntry.key.length &&
+                 strncmp(newEntry->key.data, oldEntry.key.data,
+                         oldEntry.key.length) == 0) {
+        newEntry->value = oldEntry.value;
+        break;
+      }
+      hash = (hash + 1) % table->capacity;
+    }
   }
+  FREE_ARRAY(oldEntries);
+  return;
+}
+
+void insert(Table *table, char *key, int length, Value value) {
+  if (table->count >= table->capacity * LOAD_FACTOR)
+    rearrangeEntries(table);
+
   uint32_t hash = hashString(key, length) % table->capacity;
   Entry *const entries = table->entries;
-  for (;;) {
+  for (size_t i = 0; i < table->capacity; i++) {
     if (entries[hash].key.data == NULL && entries[hash].value == 0) {
       entries[hash].key.data = key;
       entries[hash].key.length = length;
       entries[hash].value = value;
       table->count++;
-      break;
+      return;
     } else if (entries[hash].key.length == length &&
                strncmp(entries[hash].key.data, key, length) == 0) {
       entries[hash].value = value;
-      break;
+      return;
     } else {
       hash = (hash + 1) % table->capacity;
     }
   }
+  // Unreachable
+  fprintf(stderr, "Error: Table is full, cannot insert key: %s\n", key);
+  exit(EXIT_FAILURE);
 }
 
 int lookup(Value *value, const Table *table, const char *key, int length) {
@@ -92,7 +143,7 @@ void countup(Table *table, char *key, int length) {
   Value val;
   int idx;
   if ((idx = lookup(&val, table, key, length)) >= 0) {
-    table->entries[idx].value = val + 1;
+    insert(table, key, length, val + 1);
   } else {
     insert(table, key, length, 1);
   }

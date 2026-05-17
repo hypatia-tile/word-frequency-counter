@@ -14,7 +14,7 @@ typedef struct {
 } KeyStr;
 
 typedef struct {
-  KeyStr *key;
+  KeyStr key;
   Value value;
 } Entry;
 
@@ -27,9 +27,8 @@ typedef struct {
 void initTable(Table *table) {
   table->entries = (Entry *)malloc(CAPACITY * sizeof(Entry));
   for (size_t i = 0; i < CAPACITY; i++) {
-    table->entries[i].key = (KeyStr *) malloc(sizeof(KeyStr));
-    table->entries[i].key->data = NULL;
-    table->entries[i].key->length = 0;
+    table->entries[i].key.data = NULL;
+    table->entries[i].key.length = 0;
     table->entries[i].value = 0;
   }
   table->capacity = CAPACITY;
@@ -37,10 +36,6 @@ void initTable(Table *table) {
 }
 
 void freeTable(Table *table) {
-  for (size_t i = 0; i < table->capacity; i++) {
-    free(table->entries[i].key);
-    table->entries[i].key = NULL;
-  }
   free(table->entries);
   table->entries = NULL;
   table->capacity = 0;
@@ -64,14 +59,14 @@ void insert(Table *table, char *key, int length, Value value) {
   uint32_t hash = hashString(key, length) % table->capacity;
   Entry *const entries = table->entries;
   for (;;) {
-    if (entries[hash].key->data == NULL && entries[hash].value == 0) {
-      entries[hash].key->data = key;
-      entries[hash].key->length = length;
+    if (entries[hash].key.data == NULL && entries[hash].value == 0) {
+      entries[hash].key.data = key;
+      entries[hash].key.length = length;
       entries[hash].value = value;
       table->count++;
       break;
-    } else if (entries[hash].key->length == length &&
-               strncmp(entries[hash].key->data, key, length) == 0) {
+    } else if (entries[hash].key.length == length &&
+               strncmp(entries[hash].key.data, key, length) == 0) {
       entries[hash].value = value;
       break;
     } else {
@@ -83,8 +78,8 @@ void insert(Table *table, char *key, int length, Value value) {
 int lookup(Value *value, const Table *table, const char *key, int length) {
   uint32_t hash = hashString(key, length) % table->capacity;
   for (size_t i = 0; i < table->capacity; i++) {
-    if (table->entries[hash].key->length == length &&
-        strncmp(table->entries[hash].key->data, key, length) == 0) {
+    if (table->entries[hash].key.length == length &&
+        strncmp(table->entries[hash].key.data, key, length) == 0) {
       *value = table->entries[hash].value;
       return hash;
     }

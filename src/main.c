@@ -41,6 +41,7 @@ typedef struct {
 } Table;
 
 void initTable(Table *table) {
+  table->entries = GROW_ARRAY(Entry, NULL, CAPACITY);
   for (size_t i = 0; i < CAPACITY; i++) {
     table->entries[i].key.data = NULL;
     table->entries[i].key.length = 0;
@@ -71,9 +72,15 @@ static inline void rearrangeEntries(Table *table) {
   size_t oldCap = table->capacity;
   table->capacity = GROW_CAPACITY(oldCap);
   table->entries = GROW_ARRAY(Entry, NULL, table->capacity);
+  for (size_t i = 0; i < table->capacity; i++) {
+    table->entries[i].key.data = NULL;
+    table->entries[i].key.length = 0;
+    table->entries[i].value = 0;
+  }
+
   table->count = 0;
-  for (size_t i = 0; i < oldCap; i++) {
-    const Entry oldEntry = oldEntries[i];
+  for (size_t j = 0; j < oldCap; j++) {
+    const Entry oldEntry = oldEntries[j];
     if (oldEntry.key.data == NULL)
       continue;
     uint32_t hash =
@@ -129,7 +136,8 @@ void insert(Table *table, char *key, int length, Value value) {
 int lookup(Value *value, const Table *table, const char *key, int length) {
   uint32_t hash = hashString(key, length) % table->capacity;
   for (size_t i = 0; i < table->capacity; i++) {
-    if (table->entries[hash].key.length == length &&
+    if (table->entries[hash].key.data != NULL &&
+        table->entries[hash].key.length == length &&
         strncmp(table->entries[hash].key.data, key, length) == 0) {
       *value = table->entries[hash].value;
       return hash;

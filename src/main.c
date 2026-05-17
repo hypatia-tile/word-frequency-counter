@@ -22,11 +22,11 @@ uint32_t hashString(const char *key, int length) {
 enum { I_A, I_B, I_C } buckets;
 
 void insert(Entry *entries, char *key, int length) {
-  if (strncmp("a", key, length)) {
+  if (strncmp("a", key, length) == 0) {
     entries[I_A].value++;
-  } else if (strncmp("b", key, length)) {
+  } else if (strncmp("b", key, length) == 0) {
     entries[I_B].value++;
-  } else if (strncmp("c", key, length)) {
+  } else if (strncmp("c", key, length) == 0) {
     entries[I_C].value++;
   }
 }

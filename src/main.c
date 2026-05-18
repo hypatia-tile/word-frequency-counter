@@ -29,8 +29,15 @@ typedef struct {
   int length;
 } KeyStr;
 
+typedef enum {
+  EMPTY,
+  TOMSTONE,
+  OCCUPIED,
+} BucketStatus;
+
 typedef struct {
   KeyStr key;
+  BucketStatus status;
   Value value;
 } Entry;
 
@@ -43,9 +50,7 @@ typedef struct {
 void initTable(Table *table) {
   table->entries = GROW_ARRAY(Entry, NULL, CAPACITY);
   for (size_t i = 0; i < CAPACITY; i++) {
-    table->entries[i].key.data = NULL;
-    table->entries[i].key.length = 0;
-    table->entries[i].value = 0;
+    table->entries[i].status = EMPTY;
   }
   table->capacity = CAPACITY;
   table->count = 0;
@@ -73,27 +78,24 @@ static inline void rearrangeEntries(Table *table) {
   table->capacity = GROW_CAPACITY(oldCap);
   table->entries = GROW_ARRAY(Entry, NULL, table->capacity);
   for (size_t i = 0; i < table->capacity; i++) {
-    table->entries[i].key.data = NULL;
-    table->entries[i].key.length = 0;
-    table->entries[i].value = 0;
+    table->entries[i].status = EMPTY;
   }
 
   table->count = 0;
   for (size_t j = 0; j < oldCap; j++) {
     const Entry oldEntry = oldEntries[j];
-    if (oldEntry.key.data == NULL)
+    if (oldEntry.status != OCCUPIED)
       continue;
     uint32_t hash =
         hashString(oldEntry.key.data, oldEntry.key.length) % table->capacity;
     for (size_t i = 0; i < table->capacity; i++) {
       Entry *newEntry = &table->entries[hash];
-      if (newEntry->key.data == NULL) {
-        if (newEntry->value == 0) {
-          newEntry->key = oldEntry.key;
-          newEntry->value = oldEntry.value;
-          table->count++;
-          break;
-        }
+      if (newEntry->status == EMPTY) {
+        newEntry->key = oldEntry.key;
+        newEntry->value = oldEntry.value;
+        newEntry->status = OCCUPIED;
+        table->count++;
+        break;
       } else {
         hash = (hash + 1) % table->capacity;
       }
@@ -110,29 +112,38 @@ void insert(Table *table, char *key, int length, Value value) {
   uint32_t hash = hashString(key, length) % table->capacity;
   Entry *const entries = table->entries;
   for (size_t i = 0; i < table->capacity; i++) {
-    if (entries[hash].key.data == NULL && entries[hash].value == 0) {
+    switch (entries[hash].status) {
+    case EMPTY:
       entries[hash].key.data = key;
       entries[hash].key.length = length;
       entries[hash].value = value;
+      entries[hash].status = OCCUPIED;
       table->count++;
       return;
-    } else if (entries[hash].key.length == length &&
-               strncmp(entries[hash].key.data, key, length) == 0) {
+    case TOMSTONE:
+      entries[hash].key.data = key;
+      entries[hash].key.length = length;
       entries[hash].value = value;
+      entries[hash].status = OCCUPIED;
       return;
-    } else {
+    case OCCUPIED:
+      if (entries[hash].key.length == length &&
+          strncmp(entries[hash].key.data, key, length) == 0) {
+        entries[hash].value = value;
+        return;
+      }
       hash = (hash + 1) % table->capacity;
     }
   }
   // Unreachable
-  fprintf(stderr, "Error: Table is full, cannot insert key: %s\n", key);
+  fprintf(stderr, "Error: Cannot insert entry, table is full.\n");
   exit(EXIT_FAILURE);
 }
 
 int lookup(Value *value, const Table *table, const char *key, int length) {
   uint32_t hash = hashString(key, length) % table->capacity;
   for (size_t i = 0; i < table->capacity; i++) {
-    if (table->entries[hash].key.data != NULL &&
+    if (table->entries[hash].status == OCCUPIED &&
         table->entries[hash].key.length == length &&
         strncmp(table->entries[hash].key.data, key, length) == 0) {
       *value = table->entries[hash].value;

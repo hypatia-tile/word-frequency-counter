@@ -94,13 +94,9 @@ static inline void rearrangeEntries(Table *table) {
           table->count++;
           break;
         }
-      } else if (newEntry->key.length == oldEntry.key.length &&
-                 strncmp(newEntry->key.data, oldEntry.key.data,
-                         oldEntry.key.length) == 0) {
-        newEntry->value = oldEntry.value;
-        break;
+      } else {
+        hash = (hash + 1) % table->capacity;
       }
-      hash = (hash + 1) % table->capacity;
     }
   }
   FREE_ARRAY(oldEntries);

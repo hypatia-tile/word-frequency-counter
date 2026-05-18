@@ -174,6 +174,15 @@ void static search(const Table *table, const char *key) {
   }
 }
 
+int deleteEntry(Table *table, const char *key, int length) {
+  Value val;
+  int idx = lookup(&val, table, key, length);
+  if (idx < 0)
+    return 0;
+  table->entries[idx].status = TOMSTONE;
+  return 1;
+}
+
 int main() {
   Table table;
   char *inputs[] = {"apple", "banana", "banana", "blueberry", "grape"};
@@ -186,6 +195,8 @@ int main() {
   search(&table, "blueberry");
   search(&table, "grape");
   search(&table, "orange");
+  deleteEntry(&table, "apple", 5);
+  search(&table, "apple");
   freeTable(&table);
   return 0;
 }

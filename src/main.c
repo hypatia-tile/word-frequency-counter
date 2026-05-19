@@ -191,13 +191,10 @@ void parseAndCount(Table *table, const char *text) {
   const char *current = text;
 
   while (*current != '\0') {
-    // Skip punctuations.
     while (*current != '\0' && !isWordChar(*current)) {
       current++;
     }
-    // Sync
     start = current;
-    // Scan word.
     while (*current != '\0' && isWordChar(*current)) {
       current++;
     }

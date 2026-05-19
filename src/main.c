@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -25,13 +26,13 @@ void *reallocate(void *arr, size_t n) {
 typedef double Value;
 
 typedef struct {
-  char *data;
+  const char *data;
   int length;
 } KeyStr;
 
 typedef enum {
   EMPTY,
-  TOMSTONE,
+  TOMBSTONE,
   OCCUPIED,
 } BucketStatus;
 
@@ -105,7 +106,7 @@ static inline void rearrangeEntries(Table *table) {
   return;
 }
 
-void insert(Table *table, char *key, int length, Value value) {
+void insert(Table *table, const char *key, int length, Value value) {
   if (table->count >= table->capacity * LOAD_FACTOR)
     rearrangeEntries(table);
 
@@ -120,7 +121,7 @@ void insert(Table *table, char *key, int length, Value value) {
       entries[hash].status = OCCUPIED;
       table->count++;
       return;
-    case TOMSTONE:
+    case TOMBSTONE:
       entries[hash].key.data = key;
       entries[hash].key.length = length;
       entries[hash].value = value;
@@ -154,7 +155,7 @@ int lookup(Value *value, const Table *table, const char *key, int length) {
   return -1;
 }
 
-void countup(Table *table, char *key, int length) {
+void countup(Table *table, const char *key, int length) {
   Value val;
   int idx;
   if ((idx = lookup(&val, table, key, length)) >= 0) {
@@ -179,24 +180,44 @@ int deleteEntry(Table *table, const char *key, int length) {
   int idx = lookup(&val, table, key, length);
   if (idx < 0)
     return 0;
-  table->entries[idx].status = TOMSTONE;
+  table->entries[idx].status = TOMBSTONE;
   return 1;
+}
+
+static inline int isWordChar(char c) { return isalnum((unsigned char)c); }
+
+void parseAndCount(Table *table, const char *text) {
+  const char *start = text;
+  const char *current = text;
+
+  while (*current != '\0') {
+    // Skip punctuations.
+    while (*current != '\0' && !isWordChar(*current)) {
+      current++;
+    }
+    // Sync
+    start = current;
+    // Scan word.
+    while (*current != '\0' && isWordChar(*current)) {
+      current++;
+    }
+    if (current > start)
+      countup(table, start, current - start);
+  }
 }
 
 int main() {
   Table table;
-  char *inputs[] = {"apple", "banana", "banana", "blueberry", "grape"};
   initTable(&table);
-  for (size_t i = 0; i < sizeof(inputs) / sizeof(inputs[0]); i++) {
-    countup(&table, inputs[i], strlen(inputs[i]));
-  }
+  const char *test_doc =
+      "Apple, Banana, banana! Blueberry... grape, apple; banana.";
+  printf("Parsing text and counting words...\n");
+  parseAndCount(&table, test_doc);
   search(&table, "apple");
   search(&table, "banana");
   search(&table, "blueberry");
   search(&table, "grape");
   search(&table, "orange");
-  deleteEntry(&table, "apple", 5);
-  search(&table, "apple");
   freeTable(&table);
   return 0;
 }
